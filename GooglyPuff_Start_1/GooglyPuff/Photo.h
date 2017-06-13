@@ -10,8 +10,11 @@
 @class ALAsset;
 typedef void (^PhotoDownloadingCompletionBlock)(UIImage *image, NSError *error);
 typedef NS_ENUM(NSInteger, PhotoStatus) {
+    //下载中
     PhotoStatusDownloading,
+    //下载完成
     PhotoStatusGoodToGo,
+    //下载失败
     PhotoStatusFailed,
 };
 

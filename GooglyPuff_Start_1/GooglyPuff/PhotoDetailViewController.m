@@ -38,8 +38,19 @@ const CGFloat kFaceBoundsToEyeScaleFactor = 4.0f;
         [self.photoImageView setContentMode:UIViewContentModeCenter];
     }
     
+    //原来的代码，在viewDidLoad中加载，耗费非常多的时间
+    /*
     UIImage *overlayImage = [self faceOverlayImageFromImage:_image];
     [self fadeInNewImage:overlayImage];
+     */
+    
+    //更改后的代码
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
+        UIImage *overlayImage = [self faceOverlayImageFromImage:_image];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self fadeInNewImage:overlayImage];
+        });
+    });
 }
 
 //*****************************************************************************/
