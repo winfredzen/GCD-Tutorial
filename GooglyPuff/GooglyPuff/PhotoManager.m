@@ -96,37 +96,69 @@
 
 - (void)downloadPhotosWithCompletionBlock:(BatchPhotoDownloadingCompletionBlock)completionBlock
 {
-    __block NSError *error;
-    
-    for (NSInteger i = 0; i < 3; i++) {
-        NSURL *url;
-        switch (i) {
-            case 0:
-                url = [NSURL URLWithString:kOverlyAttachedGirlfriendURLString];
-                break;
-            case 1:
-                url = [NSURL URLWithString:kSuccessKidURLString];
-                break;
-            case 2:
-                url = [NSURL URLWithString:kLotsOfFacesURLString];
-                break;
-            default:
-                break;
-        }
-    
-        Photo *photo = [[Photo alloc] initwithURL:url
-                              withCompletionBlock:^(UIImage *image, NSError *_error) {
-                                  if (_error) {
-                                      error = _error;
-                                  }
-                              }];
-    
-        [[PhotoManager sharedManager] addPhoto:photo];
-    }
-    
-    if (completionBlock) {
-        completionBlock(error);
-    }
+    //使用dispatch_group_t来组织代码，在下载完成后得到通知
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
+        
+        __block NSError *error;
+        dispatch_group_t downloadGroup = dispatch_group_create();
+        //循环并发的执行
+        dispatch_apply(3, dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^(size_t i) {
+            NSURL *url;
+            switch (i) {
+                case 0:
+                    url = [NSURL URLWithString:kOverlyAttachedGirlfriendURLString];
+                    break;
+                case 1:
+                    url = [NSURL URLWithString:kSuccessKidURLString];
+                    break;
+                case 2:
+                    url = [NSURL URLWithString:kLotsOfFacesURLString];
+                    break;
+                default:
+                    break;
+            }
+            
+            NSLog(@"i is %zu", i);
+            
+            dispatch_group_enter(downloadGroup);
+            
+            Photo *photo = [[Photo alloc] initwithURL:url
+                                  withCompletionBlock:^(UIImage *image, NSError *_error) {
+                                      if (_error) {
+                                          error = _error;
+                                      }
+                                      
+                                      dispatch_group_leave(downloadGroup);
+                                  }];
+            
+            [[PhotoManager sharedManager] addPhoto:photo];
+            
+        });
+        
+        
+        /*
+         *dispatch_group_wait会阻塞当前线程
+         *dispatch_group_wait会等待至任务都完成或者超时
+         */
+        /*
+        dispatch_group_wait(downloadGroup, DISPATCH_TIME_FOREVER);
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (completionBlock) {
+                completionBlock(error);
+            }
+        });
+         */
+        
+        //另一种方式实现
+        dispatch_group_notify(downloadGroup, dispatch_get_main_queue(), ^{
+            if (completionBlock) {
+                completionBlock(error);
+            }
+        });
+        
+
+    });
+
 }
 
 //*****************************************************************************/
